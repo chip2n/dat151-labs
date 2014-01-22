@@ -1,0 +1,28 @@
+comment "//" ;
+comment "/*" "*/" ;
+comment "#" ;
+
+Fun. Function ::= Type Ident "(" [Decl] ")" "{" [Stm] "}" ;
+Dec. Decl ::= Type [Ident] ;
+
+terminator Function "" ;
+terminator Stm "" ;
+separator Decl "," ;
+separator nonempty Ident "," ;
+
+SExp.    Stm ::= Exp ";" ;
+SDecl.   Stm ::= Decl ";" ;
+SReturn. Stm ::= "return" Exp ";" ;
+
+EAdd. Exp ::= Exp "+" Exp ;
+EShiftL. Exp ::= Exp "<<" Exp ;
+EShiftR. Exp ::= Exp ">>" Exp ;
+EConst. Exp ::= Ident "::" Ident ;
+EVar. Exp ::= Ident ;
+EString. Exp ::= String ;
+EInt. Exp ::= Integer ;
+
+coercions Exp 2;
+
+TInt. Type ::= "int" ;
+TConst. Type ::= Ident "::" Ident ;
