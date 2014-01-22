@@ -2,10 +2,12 @@ comment "//" ;
 comment "/*" "*/" ;
 comment "#" ;
 
+
 Fun. Function ::= Type Ident "(" [Decl] ")" "{" [Stm] "}" ;
 Dec. Decl ::= Type [Ident] ;
+Qual. Qualifier ::= "using" Ident "::" Ident ;
 
-terminator Function "" ;
+
 terminator Stm "" ;
 separator Decl "," ;
 separator nonempty Ident "," ;
