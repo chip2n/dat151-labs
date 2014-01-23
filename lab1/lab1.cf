@@ -2,29 +2,72 @@ comment "//" ;
 comment "/*" "*/" ;
 comment "#" ;
 
+Prog. Program ::= [Stm] ;
 
-Fun. Function ::= Type Ident "(" [Decl] ")" "{" [Stm] "}" ;
+Fun. Function ::= Type Ident "(" [Arg] ")" "{" [Stm] "}" ;
+Arg. Arg  ::= Type Ident ;
 Dec. Decl ::= Type [Ident] ;
+FDec. Decl ::= Type Ident "(" [Type] ")" ;
 Qual. Qualifier ::= "using" Ident "::" Ident ;
-
 
 terminator Stm "" ;
 separator Decl "," ;
 separator nonempty Ident "," ;
+separator nonempty String "" ;
+separator Arg "," ;
+separator Exp "," ;
+separator nonempty Type "," ;
 
-SExp.    Stm ::= Exp ";" ;
-SDecl.   Stm ::= Decl ";" ;
-SReturn. Stm ::= "return" Exp ";" ;
+SExp.      Stm  ::= Exp ";" ;
+SDecl.     Stm  ::= Decl ";" ;
+SAss.      Stm  ::= Decl "=" Exp ";" ;
+STypeDef.  Stm  ::= "typedef" Decl ";" ;
+SQual.     Stm  ::= Qualifier ";" ;
+SReturn.   Stm  ::= "return" Exp ";" ;
+SFunction. Stm  ::= Function ;
+SWhile.    Stm  ::= "while" "(" Exp ")" Stm ;
+SBlock.    Stm  ::= "{" [Stm] "}" ;
+SIf.       Stm  ::= "if" "(" Exp ")" Stm ;
+SIfElse.   Stm  ::= "if" "(" Exp ")" Stm "else" Stm ;
+SIfElseS.  Stm  ::= Exp "?" Exp ":" Exp ";" ;
+SFor.      Stm  ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
 
-EAdd. Exp ::= Exp "+" Exp ;
-EShiftL. Exp ::= Exp "<<" Exp ;
-EShiftR. Exp ::= Exp ">>" Exp ;
-EConst. Exp ::= Ident "::" Ident ;
-EVar. Exp ::= Ident ;
-EString. Exp ::= String ;
-EInt. Exp ::= Integer ;
+EAss.     Exp  ::= Ident "=" Exp;
+EAdd.     Exp  ::= Exp "+" Exp ;
+ESub.     Exp  ::= Exp "-" Exp ;
+EMul.     Exp  ::= Exp "*" Exp ;
+EShiftL.  Exp  ::= Exp "<<" Exp ;
+EShiftR.  Exp  ::= Exp ">>" Exp ;
+EConst.   Exp  ::= QConst "::" Ident ;
+EVar.     Exp  ::= Ident ;
+EString.  Exp  ::= [String] ;
+EEqual.   Exp  ::= Exp "==" Exp ;
+EDiv.     Exp  ::= Exp "/" Exp ;
+EMod.     Exp  ::= Exp "%" Exp ;
+EInt.     Exp  ::= Integer ;
+EFloat.   Exp  ::= Integer "." Integer ;
+ECall.    Exp  ::= Ident "(" [Exp] ")" ;
+EMem.     Exp  ::= Exp "." Exp ;
+EIndex.   Exp  ::= Ident "[" Exp "]" ;
+EThrow.   Exp  ::= "throw" Exp ;
+ENot.     Exp  ::= "!" Exp ;
+EAnd.     Exp  ::= Exp "&&" Exp ;
+EChar.    Exp  ::= Char ;
+ELarge.   Exp  ::= Exp ">" Exp ;
+ESmall.   Exp  ::= Exp "<" Exp ;
+EDeref.   Exp  ::= Exp "->" Exp ;
+ENeq.     Exp  ::= Exp "!=" Exp ;
 
 coercions Exp 2;
 
-TInt. Type ::= "int" ;
-TConst. Type ::= Ident "::" Ident ;
+TInt.     Type ::= "int" ;
+TDouble.  Type ::= "double" ;
+TVoid.    Type ::= "void" ;
+TBool.    Type ::= "bool" ;
+TConst.   Type ::= QConst ;
+TRef.     Type ::= Type "&" ;
+TConstOp. Type ::= "const" Type ;
+
+QIdent.  QConst  ::= Ident ;
+QWiee.   QConst  ::=  QConst "::" QConst ;
+QLol.    QConst  ::=  Ident "<" [Type] ">" ;
