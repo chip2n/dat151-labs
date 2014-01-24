@@ -19,6 +19,7 @@ separator Exp "," ;
 separator nonempty Type "," ;
 
 SExp.      Stm  ::= Exp ";" ;
+SEmpty.    Stm  ::= ";" ;
 SDecl.     Stm  ::= Decl ";" ;
 SAss.      Stm  ::= Decl "=" Exp ";" ;
 STypeDef.  Stm  ::= "typedef" Decl ";" ;
@@ -33,6 +34,7 @@ SIfElseS.  Stm  ::= Exp "?" Exp ":" Exp ";" ;
 SFor.      Stm  ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
 
 EAss.     Exp  ::= Ident "=" Exp;
+EDeclAss. Exp  ::= Decl "=" Exp ;
 EAdd.     Exp  ::= Exp "+" Exp ;
 ESub.     Exp  ::= Exp "-" Exp ;
 EMul.     Exp  ::= Exp "*" Exp ;
@@ -52,11 +54,16 @@ EIndex.   Exp  ::= Ident "[" Exp "]" ;
 EThrow.   Exp  ::= "throw" Exp ;
 ENot.     Exp  ::= "!" Exp ;
 EAnd.     Exp  ::= Exp "&&" Exp ;
+EOr.      Exp  ::= Exp "||" Exp ;
 EChar.    Exp  ::= Char ;
 ELarge.   Exp  ::= Exp ">" Exp ;
 ESmall.   Exp  ::= Exp "<" Exp ;
-EDeref.   Exp  ::= Exp "->" Exp ;
+EFAccs.   Exp  ::= Exp "->" Exp ;
 ENeq.     Exp  ::= Exp "!=" Exp ;
+EPreInc.  Exp  ::= "++" Exp ;
+EDeref.   Exp  ::= "*" Exp ;
+ELeq.     Exp  ::= Exp "<=" Exp ;
+EGeq.     Exp  ::= Exp ">=" Exp ;
 
 coercions Exp 2;
 
