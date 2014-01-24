@@ -1,2 +1,3 @@
 progs-test-lab1
-lab1-test-dir
+*.hi
+*.o
