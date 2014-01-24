@@ -6,15 +6,17 @@ Prog. Program ::= [Stm] ;
 
 Fun. Function ::= Type Ident "(" [Arg] ")" "{" [Stm] "}" ;
 Arg. Arg  ::= Type Ident ;
+Par. Par  ::= Type ;
 Dec. Decl ::= Type [Ident] ;
-FDec. Decl ::= Type Ident "(" [Type] ")" ;
-Qual. Qualifier ::= "using" Ident "::" Ident ;
+FDec. Decl ::= Type Ident "(" [Par] ")";
+Qual. Qualifier ::= "using" QConst "::" QConst ;
 
 terminator Stm "" ;
 separator Decl "," ;
 separator nonempty Ident "," ;
 separator nonempty String "" ;
 separator Arg "," ;
+separator Par "," ;
 separator Exp "," ;
 separator nonempty Type "," ;
 
@@ -26,12 +28,14 @@ STypeDef.  Stm  ::= "typedef" Decl ";" ;
 SQual.     Stm  ::= Qualifier ";" ;
 SReturn.   Stm  ::= "return" Exp ";" ;
 SFunction. Stm  ::= Function ;
+SInlFunc.  Stm  ::= "inline" Function ;
 SWhile.    Stm  ::= "while" "(" Exp ")" Stm ;
 SBlock.    Stm  ::= "{" [Stm] "}" ;
 SIf.       Stm  ::= "if" "(" Exp ")" Stm ;
 SIfElse.   Stm  ::= "if" "(" Exp ")" Stm "else" Stm ;
 SIfElseS.  Stm  ::= Exp "?" Exp ":" Exp ";" ;
 SFor.      Stm  ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
+SStruct.   Stm  ::= "struct" Ident "{" [Stm] "}" ";" ;
 
 EAss.     Exp  ::= Ident "=" Exp;
 EDeclAss. Exp  ::= Decl "=" Exp ;
