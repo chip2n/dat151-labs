@@ -76,7 +76,6 @@ EOr.      Exp3   ::= Exp3 "||" Exp4 ;
 EAss.     Exp2   ::= Exp3 "=" Exp2;
 EAssDec.  Exp2   ::= Exp3 "-=" Exp2 ;
 EAssInc.  Exp2   ::= Exp3 "+=" Exp2 ;
-EDeclAss. Exp2   ::= Decl "=" Exp3 ;
 EIfElse.  Exp2   ::= Exp3 "?" Exp2 ":" Exp2 ;
 EThrow.   Exp1   ::= "throw" Exp2 ;
 
