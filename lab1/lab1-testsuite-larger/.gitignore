@@ -1,3 +1,4 @@
 progs-test-lab1
+!progs-test-lab1.hs
 *.hi
 *.o
