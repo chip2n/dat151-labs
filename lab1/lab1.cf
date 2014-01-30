@@ -81,13 +81,14 @@ EThrow.   Exp1   ::= "throw" Exp2 ;
 
 coercions Exp 16;
 
-TInt.     Type ::= "int" ;
-TDouble.  Type ::= "double" ;
-TVoid.    Type ::= "void" ;
-TBool.    Type ::= "bool" ;
-TConst.   Type ::= QConst ;
-TRef.     Type ::= Type "&" ;
-TConstOp. Type ::= "const" Type ;
+TInt.     Typ ::= "int" ;
+TDouble.  Typ ::= "double" ;
+TVoid.    Typ ::= "void" ;
+TBool.    Typ ::= "bool" ;
+TConst.   Typ ::= QConst ;
+TRef.     Typ ::= Type "&" ;
+TConstOp. Type ::= "const" Typ ;
+TType.    Type ::= Typ;
 
 QId.  QConst  ::= Id ;
 QWiee.   QConst  ::=  QConst "::" QConst ;
