@@ -2,13 +2,24 @@ comment "//" ;
 comment "/*" "*/" ;
 comment "#" ;
 
-Prog. Program ::= [Stm] ;
+-- programs
+Prog. Program ::= [Def] ;
 
+-- definitions
+DQConst.  Def ::= "using" QConst ";" ;
+DStat.    Def ::= Stm2 ;
+separator Def "" ;
+
+-- functions, function bodies and function arguments
 Fun. Function ::= Type Id "(" [Arg] ")" ;
 Arg. Arg  ::= Type Id ;
 Arg2. Arg ::= Type ;
 ArgDef. Arg ::= Type Id "=" Exp ;
+BStm. Body ::= "{" [Stm] "}" ;
+BStmN. Body ::= ";" ;
+
 Dec. Decl ::= Type [Id] ;
+DecAss. Decl ::= Type Id "=" Exp ;
 Qual. Qualifier ::= "using" QConst "::" QConst ;
 
 D. Declaration ::= Type [Id] ";" ;
@@ -21,32 +32,32 @@ separator Exp "," ;
 separator nonempty Type "," ;
 separator Declaration "" ;
 
+STypeDef.  Stm2  ::= "typedef" Type Id ";" ;
+SDecl.     Stm2  ::= Decl ";" ;
+SAss.      Stm2  ::= Decl "=" Exp ";" ;
+SStruct.   Stm2  ::= "struct" Id "{" [Declaration] "}" ";" ;
 SExp.      Stm  ::= Exp ";" ;
 SEmpty.    Stm  ::= ";" ;
-SDecl.     Stm  ::= Decl ";" ;
-SAss.      Stm  ::= Decl "=" Exp ";" ;
-STypeDef.  Stm  ::= "typedef" Decl ";" ;
 SQual.     Stm  ::= Qualifier ";" ;
 SReturn.   Stm  ::= "return" Exp ";" ;
-SFunction. Stm  ::= Function "{" [Stm] "}";
-SFuncDecl. Stm  ::= Function ";" ;
-SInlFunc.  Stm  ::= "inline" Function ;
+SFunction. Stm2  ::= Function Body;
+SInlFunc.  Stm2  ::= "inline" Function Body ;
 SWhile.    Stm  ::= "while" "(" Exp ")" Stm ;
 SDoWhile.  Stm  ::= "do" Stm "while" "(" Exp ")" ";" ;
 SBlock.    Stm  ::= "{" [Stm] "}" ;
 SIf.       Stm  ::= "if" "(" Exp ")" Stm ;
 SIfElse.   Stm  ::= "if" "(" Exp ")" Stm "else" Stm ;
-SFor.      Stm  ::= "for" "(" Stm Stm Exp ")" Stm ;
-SStruct.   Stm  ::= "struct" Id "{" [Declaration] "}" ";" ;
+SFor.      Stm  ::= "for" "(" Decl ";" Exp ";" Exp ")" Stm ;
+
+coercions Stm 2 ;
 
 EInt.     Exp16  ::= Integer ;
 EDouble.  Exp16  ::= Double ;
 EChar.    Exp16  ::= Char ;
 EString.  Exp16  ::= [String] ;
-EVar.     Exp15  ::= Id ;
 ETrue.    Exp16  ::= "true";
 EFalse.   Exp16  ::= "false";
-EConst.   Exp15  ::= QConst "::" QConst ;
+EConst.   Exp15  ::= QConst ;
 EIndex.   Exp15  ::= Id "[" Exp "]" ;
 ECall.    Exp15  ::= Id "(" [Exp] ")" ;
 EMem.     Exp14  ::= Exp14 "." Exp15 ;
@@ -81,17 +92,19 @@ EThrow.   Exp1   ::= "throw" Exp2 ;
 
 coercions Exp 16;
 
-TInt.     Typ ::= "int" ;
-TDouble.  Typ ::= "double" ;
-TVoid.    Typ ::= "void" ;
-TBool.    Typ ::= "bool" ;
-TConst.   Typ ::= QConst ;
-TRef.     Typ ::= Type "&" ;
-TConstOp. Type ::= "const" Typ ;
-TType.    Type ::= Typ;
+TInt.     Type2 ::= "int" ;
+TDouble.  Type2 ::= "double" ;
+TVoid.    Type2 ::= "void" ;
+TBool.    Type2 ::= "bool" ;
+TConst.   Type2 ::= QConst ;
+TRef.     Type2 ::= Type2 "&" ;
+TConstOp. Type ::= "const" Type2 ;
 
-QId.  QConst  ::= Id ;
-QWiee.   QConst  ::=  QConst "::" QConst ;
-QLol.    QConst  ::=  Id "<" [Type] ">" ;
+coercions Type 2;
+
+QCon. QConst ::= [Const] ;
+CId. Const ::= Id ;
+CTemp. Const ::= Id "<" [Type] ">" ;
+separator nonempty  Const "::" ;
 
 token Id (letter (letter | digit | '_')*) ;

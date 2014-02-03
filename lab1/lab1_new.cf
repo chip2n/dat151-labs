@@ -7,6 +7,8 @@ DFun. Def ::= Type Id "(" [ArgDecl] ")" Body ;
 -- argument declarations and function bodies
 separator ArgDecl "," ;
 
+separator Def "" ;
+
 ATypVar. ArgDecl  ::= Type Id ;
 
 BStm. Body ::= "{" [Stm] "}" ;
@@ -36,9 +38,9 @@ separator nonempty  Const "::" ;
 TInt. Type ::= "int" ;
 TConst. Type ::= QConst ;
 
-token Id (upper (letter | Ligit)*) ;
+token Id (upper (letter | digit)*) ;
 
 
 -- comments
-comment "//"
-comment "/*" "*/"
+comment "//" ;
+comment "/*" "*/" ;
