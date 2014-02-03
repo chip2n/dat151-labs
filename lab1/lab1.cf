@@ -7,22 +7,28 @@ Prog. Program ::= [Def] ;
 
 -- definitions
 DQConst.  Def ::= "using" QConst ";" ;
+DFunction. Def  ::= Type Id "(" [Arg] ")" Body;
+DInlFunc.  Def  ::= "inline" Type Id "(" [Arg] ")" Body ;
 DStat.    Def ::= Stm2 ;
 separator Def "" ;
 
 -- functions, function bodies and function arguments
-Fun. Function ::= Type Id "(" [Arg] ")" ;
 Arg. Arg  ::= Type Id ;
 Arg2. Arg ::= Type ;
+Arg3. Arg ::= "const" Type ;
+Arg4. Arg ::= "const" Type Id ;
+Arg5. Arg ::= "const" Type Id "=" Exp;
 ArgDef. Arg ::= Type Id "=" Exp ;
 BStm. Body ::= "{" [Stm] "}" ;
 BStmN. Body ::= ";" ;
 
-Dec. Decl ::= Type [Id] ;
+Dec. Decl ::= Type [Var] ;
+Varr.  Var ::= Id ;
+separator nonempty Var "," ;
 DecAss. Decl ::= Type Id "=" Exp ;
-Qual. Qualifier ::= "using" QConst "::" QConst ;
+DecAss. Decl ::= "const" Type Id "=" Exp ;
 
-D. Declaration ::= Type [Id] ";" ;
+D. Declaration ::= Type [Var] ";" ;
 terminator Stm "" ;
 separator Decl "," ;
 separator nonempty Id "," ;
@@ -34,14 +40,11 @@ separator Declaration "" ;
 
 STypeDef.  Stm2  ::= "typedef" Type Id ";" ;
 SDecl.     Stm2  ::= Decl ";" ;
-SAss.      Stm2  ::= Decl "=" Exp ";" ;
 SStruct.   Stm2  ::= "struct" Id "{" [Declaration] "}" ";" ;
 SExp.      Stm  ::= Exp ";" ;
 SEmpty.    Stm  ::= ";" ;
-SQual.     Stm  ::= Qualifier ";" ;
+SQual.     Stm  ::= "using" QConst ";" ;
 SReturn.   Stm  ::= "return" Exp ";" ;
-SFunction. Stm2  ::= Function Body;
-SInlFunc.  Stm2  ::= "inline" Function Body ;
 SWhile.    Stm  ::= "while" "(" Exp ")" Stm ;
 SDoWhile.  Stm  ::= "do" Stm "while" "(" Exp ")" ";" ;
 SBlock.    Stm  ::= "{" [Stm] "}" ;
@@ -92,15 +95,12 @@ EThrow.   Exp1   ::= "throw" Exp2 ;
 
 coercions Exp 16;
 
-TInt.     Type2 ::= "int" ;
-TDouble.  Type2 ::= "double" ;
-TVoid.    Type2 ::= "void" ;
-TBool.    Type2 ::= "bool" ;
-TConst.   Type2 ::= QConst ;
-TRef.     Type2 ::= Type2 "&" ;
-TConstOp. Type ::= "const" Type2 ;
-
-coercions Type 2;
+TInt.     Type ::= "int" ;
+TDouble.  Type ::= "double" ;
+TVoid.    Type ::= "void" ;
+TBool.    Type ::= "bool" ;
+TConst.   Type ::= QConst ;
+TRef.     Type ::= Type "&" ;
 
 QCon. QConst ::= [Const] ;
 CId. Const ::= Id ;
