@@ -22,13 +22,13 @@ ArgDef. Arg ::= Type Id "=" Exp ;
 BStm. Body ::= "{" [Stm] "}" ;
 BStmN. Body ::= ";" ;
 
-Dec. Decl ::= Type [Var] ;
-Varr.  Var ::= Id ;
+Decl.         Decl ::= Type [Var] ;
+DeclAss.      Decl ::= Type Id "=" Exp ;
+DeclConstAss. Decl ::= "const" Type Id "=" Exp ;
+Var.  Var ::= Id ;
 separator nonempty Var "," ;
-DecAss. Decl ::= Type Id "=" Exp ;
-DecAss. Decl ::= "const" Type Id "=" Exp ;
 
-D. Declaration ::= Type [Var] ";" ;
+StructDecl. StructDecl ::= Type [Var] ";" ;
 terminator Stm "" ;
 separator Decl "," ;
 separator nonempty Id "," ;
@@ -36,11 +36,11 @@ separator nonempty String "" ;
 separator Arg "," ;
 separator Exp "," ;
 separator nonempty Type "," ;
-separator Declaration "" ;
+separator StructDecl "" ;
 
 STypeDef.  Stm2  ::= "typedef" Type Id ";" ;
 SDecl.     Stm2  ::= Decl ";" ;
-SStruct.   Stm2  ::= "struct" Id "{" [Declaration] "}" ";" ;
+SStruct.   Stm2  ::= "struct" Id "{" [StructDecl] "}" ";" ;
 SExp.      Stm  ::= Exp ";" ;
 SEmpty.    Stm  ::= ";" ;
 SQual.     Stm  ::= "using" QConst ";" ;
