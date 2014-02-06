@@ -1,0 +1,17 @@
+*.hi
+*.o
+*.tex
+*.txt
+*.x
+*.y
+*.un~
+*.swp
+*.swo
+AbsMini.hs
+LexMini.hs
+ParMini.hs
+PrintMini.hs
+SkelMini.hs
+TestMini.hs
+runmini
+ErrM.hs
