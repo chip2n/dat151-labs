@@ -1,3 +1,15 @@
 *.un~
 *.swp
 *.swo
+
+*.tex
+*.txt
+*.x
+*.y
+AbsCPP.hs
+ErrM.hs
+LexCPP.hs
+ParCPP.hs
+PrintCPP.hs
+SkelCPP.hs
+TestCPP.hs
