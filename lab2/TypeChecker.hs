@@ -6,12 +6,12 @@ import ErrM
 
 
 typecheck :: Program -> Err ()
-typecheck p = return ()
+typecheck (PDefs defs) = checkDefs emptyEnv defs
 
 checkDefs :: Env -> [Def] -> Err ()
 checkDefs = undefined
 
-checkDef :: Env -> Degf -> Err Env
+checkDef :: Env -> Def -> Err Env
 checkDef = undefined
 
 checkStms :: Env -> [Stm] -> Err ()
@@ -32,15 +32,15 @@ inferExp = undefined
 
 
 
-type Env = [[(Ident, Type)]]
+type Env = [[(Id, Type)]]
 
 emptyEnv :: Env
 emptyEnv = [[]]
 
-addVar :: Env -> Ident -> Type -> Err Env
+addVar :: Env -> Id -> Type -> Err Env
 addVar = undefined
 
-lookupVar :: Env -> Ident -> Type -> Err Env
+lookupVar :: Env -> Id -> Type -> Err Env
 lookupVar = undefined
 
 addScope :: Env -> Env
