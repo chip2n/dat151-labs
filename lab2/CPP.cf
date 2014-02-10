@@ -39,7 +39,7 @@ EMinus.  Exp11  ::= Exp11 "-"  Exp12 ;
 ELt.     Exp9   ::= Exp9  "<"  Exp10 ;
 EGt.     Exp9   ::= Exp9  ">"  Exp10 ;
 ELtEq.   Exp9   ::= Exp9  "<=" Exp10 ;
-EGtWq.   Exp9   ::= Exp9  ">=" Exp10 ;
+EGtEq.   Exp9   ::= Exp9  ">=" Exp10 ;
 EEq.     Exp8   ::= Exp8  "==" Exp9 ;
 ENEq.    Exp8   ::= Exp8  "!=" Exp9 ;
 EAnd.    Exp4   ::= Exp4  "&&" Exp5 ;

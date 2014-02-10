@@ -2,6 +2,8 @@
 *.swp
 *.swo
 
+*.bak
+
 *.tex
 *.txt
 *.x
