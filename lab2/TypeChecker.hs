@@ -11,8 +11,8 @@ import ErrM
 typecheck :: Program -> Err ()
 typecheck (PDefs defs) = do
     env <- buildInitialSymbolTable emptyEnv
-    env <- buildSymbolTable env defs
-    checkDefs env defs 
+    env' <- buildSymbolTable env defs
+    checkDefs env' defs 
     return ()
 
 buildInitialSymbolTable :: Env -> Err Env
@@ -33,20 +33,12 @@ buildSymbolTable env ((DFun t id args stms):ds) = do
 checkDefs :: Env -> [Def] -> Err Env
 checkDefs = foldM checkDef
 
-
---addVar :: Env -> Id -> Type -> Err Env
 checkDef :: Env -> Def -> Err Env
-checkDef env (DFun r n args stms) = do
+checkDef env (DFun r _ args stms) = do
     env' <- foldM addArg (newBlock env) args
-    checkDefStms env' stms r
-  where addArg e (ADecl t id) = addVar e id t
-
-checkDefStms :: Env -> [Stm] -> Type -> Err Env
-checkDefStms env [] t = return env
-checkDefStms env (SReturn e:rest) t = checkExp env e t >> checkDefStms env rest t
-checkDefStms env (s:rest) t = do
-    env' <- checkStm env s
-    checkDefStms env' rest t
+    checkStms (newEnv env') stms
+  where addArg e (ADecl t i) = addVar e i t
+        newEnv (Env s c _) = Env s c r
 
 checkStms :: Env -> [Stm] -> Err Env
 checkStms = foldM checkStm
@@ -57,7 +49,11 @@ checkStm env s =
         SExp e -> inferExp env e >> return env
         SDecls t xs -> foldM (addFold t) env xs
         SInit t n e -> checkExp env e t >> addVar env n t
-        SReturn e -> inferExp env e >> return env
+        SReturn e -> do
+            t <- inferExp env e
+            if (returnType env) == t
+                then return env
+                else fail "yoloo"
         SWhile e s1 -> checkExp env e Type_bool >> checkStm env s1
         SBlock stms -> checkStms (newBlock env) stms >> return env
         SIfElse e s1 s2 -> do
@@ -68,11 +64,12 @@ checkStm env s =
   where addFold t a b = addVar a b t
 
 checkExp :: Env -> Exp -> Type -> Err ()
-checkExp env e t = do t' <- inferExp env e
-                      if t' /= t
-                          then fail (printTree e ++ " has type " ++ printTree t'
-                                     ++ " expected " ++ printTree t)
-                          else return ()
+checkExp env e t = do
+    t' <- inferExp env e
+    if t' /= t
+        then fail (printTree e ++ " has type " ++ printTree t'
+                   ++ " expected " ++ printTree t)
+        else return ()
 
 inferExp :: Env -> Exp -> Err Type
 inferExp env e =
@@ -82,13 +79,14 @@ inferExp env e =
         ETrue     -> return Type_bool
         EFalse    -> return Type_bool
         EId x     -> lookupVar env x
-        EApp x xs -> do (argTypes, returnType) <- lookupFun env x
-                        xs' <- mapM (inferExp env) xs
-                        if argTypes == xs'
-                            then return returnType
-                            else fail (printTree x ++ " called with arguments"
-                                        ++ show xs ++ ", but the required arguments are"
-                                        ++ show argTypes)
+        EApp x xs -> do
+            (argTypes, ret) <- lookupFun env x
+            xs' <- mapM (inferExp env) xs
+            if argTypes == xs'
+                then return ret
+                else fail (printTree x ++ " called with arguments"
+                            ++ show xs ++ ", but the required arguments are"
+                            ++ show argTypes)
         EPIncr x  -> inferUna [Type_int, Type_double] env x
         EPDecr x  -> inferUna [Type_int, Type_double] env x
         EIncr x  -> inferUna [Type_int, Type_double] env x
@@ -103,23 +101,25 @@ inferExp env e =
         EGtEq e1 e2 -> compareExp e1 e2 >> return Type_bool
         EEq e1 e2 -> compareExp e1 e2 >> return Type_bool
         ENEq e1 e2 -> compareExp e1 e2 >> return Type_bool
-        EAnd e1 e2 -> do t1 <- inferExp env e1
-                         t2 <- inferExp env e2
-                         if t1 == Type_bool && t2 == Type_bool
-                             then return t1
-                             else fail (printTree e1 ++ " has type " ++ printTree t1
-                                         ++ " and " ++ printTree e2 ++ " has type "
-                                         ++ printTree t2 ++ ", but conjunction requires"
-                                         ++ " both arguments to be of type Bool.")
-        EOr e1 e2 -> do t1 <- inferExp env e1
-                        t2 <- inferExp env e2
-                        if t1 == Type_bool && t2 == Type_bool
-                            then return t1
-                            else fail (printTree e1 ++ " has type " ++ printTree t1
-                                        ++ " and " ++ printTree e2 ++ " has type "
-                                        ++ printTree t2 ++ ", but disjunction requires"
-                                        ++ " both arguments to be of type Bool.")
-        EAss (EId x) e -> compareExp (EId x) e >> inferExp env (EId x)
+        EAnd e1 e2 -> do
+            t1 <- inferExp env e1
+            t2 <- inferExp env e2
+            if t1 == Type_bool && t2 == Type_bool
+                then return t1
+                else fail (printTree e1 ++ " has type " ++ printTree t1
+                            ++ " and " ++ printTree e2 ++ " has type "
+                            ++ printTree t2 ++ ", but conjunction requires"
+                            ++ " both arguments to be of type Bool.")
+        EOr e1 e2 -> do
+            t1 <- inferExp env e1
+            t2 <- inferExp env e2
+            if t1 == Type_bool && t2 == Type_bool
+                then return t1
+                else fail (printTree e1 ++ " has type " ++ printTree t1
+                            ++ " and " ++ printTree e2 ++ " has type "
+                            ++ printTree t2 ++ ", but disjunction requires"
+                            ++ " both arguments to be of type Bool.")
+        EAss (EId x) e1 -> compareExp (EId x) e1 >> inferExp env (EId x)
   where compareExp e1 e2 = do t1 <- inferExp env e1
                               t2 <- inferExp env e2
                               if t1 == t2
@@ -143,42 +143,47 @@ inferUna types env e = do
         else fail $ "Wrong type of expression" ++ printTree e
 
 
-type Env = (Sig, [Context])
 type Sig = Map.Map Id ([Type], Type)
 type Context = Map.Map Id Type
 
+data Env = Env { sig :: Sig
+               , context :: [Context]
+               , returnType :: Type
+               } 
+
 emptyEnv :: Env
-emptyEnv = (Map.empty, [Map.empty])
+emptyEnv = Env Map.empty [Map.empty] Type_void
 
 addVar :: Env -> Id -> Type -> Err Env
-addVar (sig, (c:cs)) id t = do
-    if id `Map.notMember` c
-        then return $ (sig, Map.insert id t c:cs)
-        else fail $ "Variable " ++ show id ++ " already declared in this context."
+addVar (Env sig (c:cs) ret) i t = do
+    if i `Map.notMember` c
+        then return $ Env sig (Map.insert i t c:cs) ret
+        else fail $ "Variable " ++ show i
+                     ++ " already declared in this context."
 
 lookupVar :: Env -> Id -> Err Type
-lookupVar (sig, context) id = lookupVarContext context id
+lookupVar (Env _ context _) i = lookupVarContext context i
 
 lookupVarContext :: [Context] -> Id -> Err Type
-lookupVarContext [] id = fail $ "Variable " ++ show id ++ " not found"
-lookupVarContext (c:cs) id = do
-    case Map.lookup id c of
-        Nothing -> lookupVarContext cs id
+lookupVarContext [] i = fail $ "Variable " ++ show i ++ " not found"
+lookupVarContext (c:cs) i = do
+    case Map.lookup i c of
+        Nothing -> lookupVarContext cs i
         Just t  -> return t
     
 lookupFun :: Env -> Id -> Err ([Type], Type)
-lookupFun (sig, _) id = do
-    case Map.lookup id sig of
-        Nothing -> fail $ "Function " ++ show id ++ " not found."
+lookupFun (Env sig _ _) i = do
+    case Map.lookup i sig of
+        Nothing -> fail $ "Function " ++ show i ++ " not found."
         Just f  -> return f
 
 updateFun :: Env -> Id -> ([Type], Type) -> Err Env
-updateFun (sig, x) id s = do
-    case Map.lookup id sig of
+updateFun (Env sig x ret) i s = do
+    case Map.lookup i sig of
         Nothing -> do
-            let sig' = Map.insert id s sig
-            return (sig', x)
-        Just f  -> fail $ "Function " ++ show id ++ " already in symbol table."
+            let sig' = Map.insert i s sig
+            return $ Env sig' x ret
+        Just _  -> fail $ "Function " ++ show i ++ " already in symbol table."
 
 newBlock :: Env -> Env
-newBlock (sig, cs) = (sig, Map.empty:cs)
+newBlock (Env sig cs ret) = Env sig (Map.empty:cs) ret
