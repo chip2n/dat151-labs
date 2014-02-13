@@ -60,3 +60,4 @@ comment "#" ;
 comment "//" ;
 comment "/*" "*/" ;
 
+-- internal ETyped Exp ::= "(" Type ")" Exp ;

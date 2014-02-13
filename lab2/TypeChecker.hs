@@ -53,7 +53,7 @@ checkStm env s =
             t <- inferExp env e
             if (returnType env) == t
                 then return env
-                else fail "yoloo"
+                else fail $ "Wrong return type, expected " ++ show (returnType env)
         SWhile e s1 -> checkExp env e Type_bool >> checkStm env s1
         SBlock stms -> checkStms (newBlock env) stms >> return env
         SIfElse e s1 s2 -> do
