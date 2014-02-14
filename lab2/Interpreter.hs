@@ -140,7 +140,7 @@ evalExp env e =
             (v1, env')  <- evalExp env e1
             (v2, env'') <- evalExp env' e2
             case (v1,v2) of
-                (VInt i1, VInt i2)       -> return (VInt (quot i1 i2), env'')
+                (VInt i1, VInt i2)       -> return (VInt (div i1 i2), env'')
                 (VDouble d1, VDouble d2) -> return (VDouble (d1/d2), env'')
         EPlus e1 e2   -> do
             (v1, env')  <- evalExp env e1
