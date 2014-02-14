@@ -24,11 +24,12 @@ execDef env (DFun t i args ([])) = return (VVoid, env)
 
 execStms :: Env -> [Stm] -> IO Env
 execStms env [] = return env
-execStms env (s:stms) = do env' <- execStm env s
-                           execStms env' stms
+execStms env (s:stms) = do
+    env' <- execStm env s
+    execStms env' stms
 
 execStm :: Env -> Stm -> IO Env
-execStm env s =
+execStm env@(Env q1 qs) s = do
     case s of
         SExp e           -> evalExp env e >>= return . snd
         SDecls _ xs      -> return $ foldl (addVar) env xs
@@ -46,7 +47,7 @@ execStm env s =
                 else return env' 
         SBlock xs        -> do
             env' <- execStms (enterScope env) xs
-            return (env')
+            return (leaveScope env')
         SIfElse e s1 s2  -> do
             (val, env') <- evalExp env e
             if val == VBool True
@@ -239,7 +240,8 @@ setVar :: Env -> Id -> Value -> Env
 setVar (Env s []) i v = error $ "Unknown variable " ++ printTree i ++ "."
 setVar (Env s (c:cs)) i v =
     case Map.lookup i c of
-        Nothing -> setVar (Env s cs) i v
+        Nothing -> let (Env s' cs') = setVar (Env s cs) i v
+                   in Env s' (c:cs')
         Just x -> Env s (Map.insert i v c:cs)
 
 setFun :: Env -> Def -> Env
