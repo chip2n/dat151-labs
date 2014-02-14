@@ -5,7 +5,7 @@ import PrintCPP
 import ErrM
 
 import Control.Monad
-import qualified Data.Map as M
+import qualified Data.Map as Map
 
 interpret :: Program -> IO ()
 interpret (PDefs defs) = do
@@ -14,7 +14,12 @@ interpret (PDefs defs) = do
     return ()
 
 execDef :: Env -> Def -> IO (Value, Env)
-execDef env (DFun t i args stms) = undefined
+execDef env (DFun t i args ((SReturn e):ss)) = do
+    evalExp env e
+execDef env (DFun t i args (s:ss)) = do
+    env' <- execStm env s
+    execDef env' (DFun t i args ss)
+    
     
 
 execStms :: Env -> [Stm] -> IO Env
@@ -28,8 +33,8 @@ execStm env s =
         SExp e           -> evalExp env e >>= return . snd
         SDecls _ xs      -> return $ foldl (addVar) env xs
         SInit t i e      -> do
-            let env' = addVar env i
-            (value, env'') <- evalExp env' e
+--            let env' = addVar env i
+            (value, env'') <- evalExp env e
             return $ setVar env'' i value
         SReturn e        -> return env
         SWhile e s1      -> do
@@ -56,13 +61,38 @@ evalExp env e =
         EInt i        -> return (VInt i, env)
         EDouble d     -> return (VDouble d, env)
         EId x         -> return (lookupVar env x, env)
-        EApp i es     -> do
-            env' <- foldM evalExp env es
-            let (DFun _ _ args stms) = lookupFun env' i
-            let args' = map (\(ADecl at it) -> it) args
 
-            return undefined
-             
+        -- BUILT-IN FUNCTIONS --
+        EApp (Id "printInt") e' -> do
+            (VInt i, env') <- evalExp env (head e')
+            putStrLn $ show i
+            return (VVoid, env')
+
+        EApp (Id "printDouble") e' -> do
+            (VDouble d, env') <- evalExp env (head e')
+            putStrLn $ show d
+            return (VVoid, env')
+
+        EApp (Id "readInt") _ -> do
+            i <- getLine
+            return (VInt (read i), env)
+
+        EApp (Id "readDouble") _ -> do
+            d <- getLine
+            return (VDouble (read d), env)
+
+        EApp i es     -> do
+            (vals, env') <- foldM foldEval ([], env) es
+            let def@(DFun _ _ args stms) = lookupFun env' i
+            let argsNames = map (\(ADecl at it) -> it) args
+
+            let env'' = enterScope env'
+            let a = zip argsNames vals
+
+            let env''' = foldl (\e (arg,val) -> setVar e arg val) env'' a
+            (resVal, resEnv) <- execDef env''' def
+            return (resVal, leaveScope resEnv)
+            
         EPIncr e      -> undefined
         EPDecr e      -> undefined
         EIncr e       -> undefined
@@ -83,10 +113,14 @@ evalExp env e =
         ENEq e1 e2    -> undefined
         EAnd e1 e2    -> undefined
         EOr e1 e2     -> undefined
-        EAss e1 e2    -> undefined
+        EAss (EId i) e2    -> do
+            (val, env')  <- evalExp env e2
+            return (val, setVar env' i val)
+  where foldEval (val, env) e = do
+            (val', env') <- evalExp env e
+            return (val ++ [val'], env')
 
 
-type Env = [[(Id, Value)]]
 data Value = VInt Integer
            | VDouble Double
            | VBool Bool
@@ -94,26 +128,39 @@ data Value = VInt Integer
            | VUndef
            deriving (Eq, Show)
 
+type Fun = Map.Map Id Def
+type Context = Map.Map Id Value
+data Env = Env { fun :: Fun
+               , context :: [Context]
+               }
+
 emptyEnv :: Env
-emptyEnv = undefined
+emptyEnv = Env Map.empty ([Map.empty])
 
 addVar :: Env -> Id -> Env
-addVar = undefined
+addVar = error "hej"
 
 setVar :: Env -> Id -> Value -> Env
-setVar = undefined
+setVar (Env s (c:cs)) i v = Env s (Map.insert i v c:cs)
 
 setFun :: Env -> Def -> Env
-setFun = undefined
+setFun (Env s c) d@(DFun _ i _ _) = Env (Map.insert i d s) c
 
 lookupVar :: Env -> Id -> Value
-lookupVar = undefined
+lookupVar (Env _ []) i = error $ "Unknown variable " ++ printTree i ++ "."
+lookupVar (Env s (c:cs)) i =
+    case Map.lookup i c of
+        Nothing -> lookupVar (Env s cs) i
+        Just v -> v
 
 lookupFun :: Env -> Id -> Def
-lookupFun = undefined
+lookupFun (Env s _) i =
+    case Map.lookup i s of
+        Nothing -> error $ "Function " ++ show i ++ " not found."
+        Just d -> d
 
 enterScope :: Env -> Env
-enterScope = undefined
+enterScope (Env s c) = Env s (Map.empty:c)
 
 leaveScope :: Env -> Env
-leaveScope = undefined
+leaveScope (Env s c) = Env s (drop 1 c)
