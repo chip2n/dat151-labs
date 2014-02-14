@@ -19,7 +19,7 @@ execDef env (DFun t i args ((SReturn e):ss)) = do
 execDef env (DFun t i args (s:ss)) = do
     env' <- execStm env s
     execDef env' (DFun t i args ss)
-    
+execDef env (DFun t i args ([])) = return (VVoid, env)
     
 
 execStms :: Env -> [Stm] -> IO Env
@@ -33,8 +33,8 @@ execStm env s =
         SExp e           -> evalExp env e >>= return . snd
         SDecls _ xs      -> return $ foldl (addVar) env xs
         SInit t i e      -> do
---            let env' = addVar env i
-            (value, env'') <- evalExp env e
+            let env' = addVar env i
+            (value, env'') <- evalExp env' e
             return $ setVar env'' i value
         SReturn e        -> return env
         SWhile e s1      -> do
@@ -42,11 +42,11 @@ execStm env s =
             if val == VBool True
                 then do 
                     env'' <- execStm env' s1
-                    execStm env'' s1
+                    execStm env'' s
                 else return env' 
         SBlock xs        -> do
             env' <- execStms (enterScope env) xs
-            return (leaveScope env')
+            return (env')
         SIfElse e s1 s2  -> do
             (val, env') <- evalExp env e
             if val == VBool True
@@ -89,30 +89,116 @@ evalExp env e =
             let env'' = enterScope env'
             let a = zip argsNames vals
 
-            let env''' = foldl (\e (arg,val) -> setVar e arg val) env'' a
+            let env''' = foldl (\e (arg,val) -> setVar (addVar e arg) arg val) env'' a
             (resVal, resEnv) <- execDef env''' def
             return (resVal, leaveScope resEnv)
             
-        EPIncr e      -> undefined
-        EPDecr e      -> undefined
-        EIncr e       -> undefined
-        EDecr e       -> undefined
-        ETimes e1 e2  -> undefined
-        EDiv e1 e2    -> undefined
+        EPIncr (EId i) -> do
+            (val, env') <- evalExp env (EId i)
+            let newVal = case val of
+                            VInt i -> VInt $ i + 1
+                            VDouble d -> VDouble $ d + 1
+                            _   -> error "sdfgdg"
+
+            let env'' = setVar env' i (newVal)
+            return (val, env'')
+        EPDecr (EId i) -> do
+            (val, env') <- evalExp env (EId i)
+            let newVal = case val of
+                            VInt i -> VInt $ i - 1
+                            VDouble d -> VDouble $ d - 1
+                            _   -> error "sdfgdg"
+
+            let env'' = setVar env' i (newVal)
+            return (val, env'')
+        EIncr (EId i) -> do
+            (val, env') <- evalExp env (EId i)
+            let newVal = case val of
+                            VInt i -> VInt $ i + 1
+                            VDouble d -> VDouble $ d + 1
+                            _   -> error "sdfgdg"
+
+            let env'' = setVar env' i (newVal)
+            return (newVal, env'')
+        EDecr (EId i) -> do
+            (val, env') <- evalExp env (EId i)
+            let newVal = case val of
+                            VInt i -> VInt $ i - 1
+                            VDouble d -> VDouble $ d - 1
+                            _   -> error "sdfgdg"
+
+            let env'' = setVar env' i (newVal)
+            return (newVal, env'')
+        ETimes e1 e2   -> do
+            (v1, env')  <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            case (v1,v2) of
+                (VInt i1, VInt i2)       -> return (VInt (i1*i2), env'')
+                (VDouble d1, VDouble d2) -> return (VDouble (d1*d2), env'')
+        EDiv e1 e2   -> do
+            (v1, env')  <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            case (v1,v2) of
+                (VInt i1, VInt i2)       -> return (VInt (quot i1 i2), env'')
+                (VDouble d1, VDouble d2) -> return (VDouble (d1/d2), env'')
         EPlus e1 e2   -> do
             (v1, env')  <- evalExp env e1
             (v2, env'') <- evalExp env' e2
             case (v1,v2) of
                 (VInt i1, VInt i2)       -> return (VInt (i1+i2), env'')
                 (VDouble d1, VDouble d2) -> return (VDouble (d1+d2), env'')
-        ELt e1 e2     -> undefined
-        EGt e1 e2     -> undefined
-        ELtEq e1 e2   -> undefined
-        EGtEq e1 e2   -> undefined
-        EEq e1 e2     -> undefined
-        ENEq e1 e2    -> undefined
-        EAnd e1 e2    -> undefined
-        EOr e1 e2     -> undefined
+        EMinus e1 e2   -> do
+            (v1, env')  <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            case (v1,v2) of
+                (VInt i1, VInt i2)       -> return (VInt (i1-i2), env'')
+                (VDouble d1, VDouble d2) -> return (VDouble (d1-d2), env'')
+        ELt e1 e2     -> do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 < v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
+        EGt e1 e2     -> do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 > v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
+        ELtEq e1 e2     -> do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 <= v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
+        EGtEq e1 e2     -> do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 >= v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
+        EEq e1 e2     -> do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 == v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
+        ENEq e1 e2     -> do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 /= v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
+        EAnd e1 e2    -> do
+            (v1, env') <- evalExp env e1
+            if v1 == VBool True
+                then evalExp env' e2
+                else return (VBool False, env')
+        EOr e1 e2    -> do
+            (v1, env') <- evalExp env e1
+            if v1 == VBool False
+                then evalExp env' e2
+                else return (VBool True, env')
         EAss (EId i) e2    -> do
             (val, env')  <- evalExp env e2
             return (val, setVar env' i val)
@@ -120,13 +206,18 @@ evalExp env e =
             (val', env') <- evalExp env e
             return (val ++ [val'], env')
 
-
 data Value = VInt Integer
            | VDouble Double
            | VBool Bool
            | VVoid
            | VUndef
            deriving (Eq, Show)
+
+instance Ord Value where
+    compare (VInt i1) (VInt i2) = compare i1 i2
+    compare (VInt i) (VDouble d) = compare (fromIntegral i) d
+    compare (VDouble d) (VInt i) = compare d (fromIntegral i)
+    compare (VDouble d) (VDouble d2) = compare d d2
 
 type Fun = Map.Map Id Def
 type Context = Map.Map Id Value
@@ -138,10 +229,18 @@ emptyEnv :: Env
 emptyEnv = Env Map.empty ([Map.empty])
 
 addVar :: Env -> Id -> Env
-addVar = error "hej"
+addVar (Env s (c:cs)) i = Env s (Map.insert i VUndef c:cs)
 
+{-
 setVar :: Env -> Id -> Value -> Env
 setVar (Env s (c:cs)) i v = Env s (Map.insert i v c:cs)
+-}
+setVar :: Env -> Id -> Value -> Env
+setVar (Env s []) i v = error $ "Unknown variable " ++ printTree i ++ "."
+setVar (Env s (c:cs)) i v =
+    case Map.lookup i c of
+        Nothing -> setVar (Env s cs) i v
+        Just x -> Env s (Map.insert i v c:cs)
 
 setFun :: Env -> Def -> Env
 setFun (Env s c) d@(DFun _ i _ _) = Env (Map.insert i d s) c
@@ -163,4 +262,4 @@ enterScope :: Env -> Env
 enterScope (Env s c) = Env s (Map.empty:c)
 
 leaveScope :: Env -> Env
-leaveScope (Env s c) = Env s (drop 1 c)
+leaveScope (Env s (c:cs)) = Env s cs

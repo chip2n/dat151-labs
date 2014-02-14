@@ -1,8 +1,17 @@
 int main() {
-    int h = 1337;
+  int i = 78;
+  {
+    int i = 1;
+    printInt(i);
+    {
+        i = 2;
+        printInt(i);
+    }
+    printInt(i);
+  }
+  printInt(i);
 
-    printInt(h);
-    h = readInt();
-    printInt(h);
-    return 1;
 }
+
+//void printInt(int x) { }
+//void printDouble(double x) { }

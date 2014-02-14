@@ -3,6 +3,7 @@
 -- GHC needs -threaded
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 import Data.Char
 import Data.IORef
@@ -265,7 +266,10 @@ checkDirectoryExists f =
 		         exitFailure
 
 readFileIfExists :: FilePath -> IO String
-readFileIfExists f = catch (readFile f) (\_ -> return "")
+readFileIfExists f = catch (readFile f) exceptionHandler
+
+exceptionHandler :: IOException -> IO String
+exceptionHandler = (\_ -> return "")
 
 --
 -- * Error reporting and output checking
