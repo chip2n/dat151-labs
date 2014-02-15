@@ -2,7 +2,6 @@ module Interpreter where
 
 import AbsCPP
 import PrintCPP
-import ErrM
 
 import Control.Monad
 import qualified Data.Map as Map
@@ -14,13 +13,11 @@ interpret (PDefs defs) = do
     return ()
 
 execDef :: Env -> Def -> IO (Value, Env)
-execDef env (DFun t i args ((SReturn e):ss)) = do
-    evalExp env e
+execDef env (DFun _ _ _ ((SReturn e):_)) = evalExp env e
 execDef env (DFun t i args (s:ss)) = do
     env' <- execStm env s
     execDef env' (DFun t i args ss)
-execDef env (DFun t i args ([])) = return (VVoid, env)
-    
+execDef env (DFun _ _ _ ([])) = return (VVoid, env)
 
 execStms :: Env -> [Stm] -> IO Env
 execStms env [] = return env
@@ -29,15 +26,15 @@ execStms env (s:stms) = do
     execStms env' stms
 
 execStm :: Env -> Stm -> IO Env
-execStm env@(Env q1 qs) s = do
+execStm env s = do
     case s of
         SExp e           -> evalExp env e >>= return . snd
         SDecls _ xs      -> return $ foldl (addVar) env xs
-        SInit t i e      -> do
+        SInit _ i e      -> do
             let env' = addVar env i
             (value, env'') <- evalExp env' e
             return $ setVar env'' i value
-        SReturn e        -> return env
+        SReturn _        -> return env
         SWhile e s1      -> do
             (val, env') <- evalExp env e
             if val == VBool True
@@ -63,7 +60,7 @@ evalExp env e =
         EDouble d     -> return (VDouble d, env)
         EId x         -> return (lookupVar env x, env)
 
-        -- BUILT-IN FUNCTIONS --
+        ------------- BUILT-IN FUNCTIONS --------------
         EApp (Id "printInt") e' -> do
             (VInt i, env') <- evalExp env (head e')
             putStrLn $ show i
@@ -81,16 +78,17 @@ evalExp env e =
         EApp (Id "readDouble") _ -> do
             d <- getLine
             return (VDouble (read d), env)
+        -----------------------------------------------
 
         EApp i es     -> do
             (vals, env') <- foldM foldEval ([], env) es
-            let def@(DFun _ _ args stms) = lookupFun env' i
-            let argsNames = map (\(ADecl at it) -> it) args
+            let def@(DFun _ _ args _) = lookupFun env' i
+            let argsNames = map (\(ADecl _ it) -> it) args
 
             let env'' = enterScope env'
             let a = zip argsNames vals
 
-            let env''' = foldl (\e (arg,val) -> setVar (addVar e arg) arg val) env'' a
+            let env''' = foldl (\e' (arg,val) -> setVar (addVar e' arg) arg val) env'' a
             (resVal, resEnv) <- execDef env''' def
             return (resVal, leaveScope resEnv)
             
@@ -99,7 +97,6 @@ evalExp env e =
             let newVal = case val of
                             VInt i -> VInt $ i + 1
                             VDouble d -> VDouble $ d + 1
-                            _   -> error "sdfgdg"
 
             let env'' = setVar env' i (newVal)
             return (val, env'')
@@ -108,7 +105,6 @@ evalExp env e =
             let newVal = case val of
                             VInt i -> VInt $ i - 1
                             VDouble d -> VDouble $ d - 1
-                            _   -> error "sdfgdg"
 
             let env'' = setVar env' i (newVal)
             return (val, env'')
@@ -117,7 +113,6 @@ evalExp env e =
             let newVal = case val of
                             VInt i -> VInt $ i + 1
                             VDouble d -> VDouble $ d + 1
-                            _   -> error "sdfgdg"
 
             let env'' = setVar env' i (newVal)
             return (newVal, env'')
@@ -126,7 +121,6 @@ evalExp env e =
             let newVal = case val of
                             VInt i -> VInt $ i - 1
                             VDouble d -> VDouble $ d - 1
-                            _   -> error "sdfgdg"
 
             let env'' = setVar env' i (newVal)
             return (newVal, env'')
@@ -154,43 +148,13 @@ evalExp env e =
             case (v1,v2) of
                 (VInt i1, VInt i2)       -> return (VInt (i1-i2), env'')
                 (VDouble d1, VDouble d2) -> return (VDouble (d1-d2), env'')
-        ELt e1 e2     -> do
-            (v1, env') <- evalExp env e1
-            (v2, env'') <- evalExp env' e2
-            if v1 < v2
-                then return (VBool True, env'')
-                else return (VBool False, env'')
-        EGt e1 e2     -> do
-            (v1, env') <- evalExp env e1
-            (v2, env'') <- evalExp env' e2
-            if v1 > v2
-                then return (VBool True, env'')
-                else return (VBool False, env'')
-        ELtEq e1 e2     -> do
-            (v1, env') <- evalExp env e1
-            (v2, env'') <- evalExp env' e2
-            if v1 <= v2
-                then return (VBool True, env'')
-                else return (VBool False, env'')
-        EGtEq e1 e2     -> do
-            (v1, env') <- evalExp env e1
-            (v2, env'') <- evalExp env' e2
-            if v1 >= v2
-                then return (VBool True, env'')
-                else return (VBool False, env'')
-        EEq e1 e2     -> do
-            (v1, env') <- evalExp env e1
-            (v2, env'') <- evalExp env' e2
-            if v1 == v2
-                then return (VBool True, env'')
-                else return (VBool False, env'')
-        ENEq e1 e2     -> do
-            (v1, env') <- evalExp env e1
-            (v2, env'') <- evalExp env' e2
-            if v1 /= v2
-                then return (VBool True, env'')
-                else return (VBool False, env'')
-        EAnd e1 e2    -> do
+        ELt e1 e2       -> compareExpWith (<)  e1 e2
+        EGt e1 e2       -> compareExpWith (>)  e1 e2
+        ELtEq e1 e2     -> compareExpWith (<=) e1 e2
+        EGtEq e1 e2     -> compareExpWith (>=) e1 e2
+        EEq e1 e2       -> compareExpWith (==) e1 e2
+        ENEq e1 e2      -> compareExpWith (/=) e1 e2
+        EAnd e1 e2     -> do
             (v1, env') <- evalExp env e1
             if v1 == VBool True
                 then evalExp env' e2
@@ -206,6 +170,12 @@ evalExp env e =
   where foldEval (val, env) e = do
             (val', env') <- evalExp env e
             return (val ++ [val'], env')
+        compareExpWith f e1 e2 = do
+            (v1, env') <- evalExp env e1
+            (v2, env'') <- evalExp env' e2
+            if v1 `f` v2
+                then return (VBool True, env'')
+                else return (VBool False, env'')
 
 data Value = VInt Integer
            | VDouble Double
@@ -232,17 +202,13 @@ emptyEnv = Env Map.empty ([Map.empty])
 addVar :: Env -> Id -> Env
 addVar (Env s (c:cs)) i = Env s (Map.insert i VUndef c:cs)
 
-{-
 setVar :: Env -> Id -> Value -> Env
-setVar (Env s (c:cs)) i v = Env s (Map.insert i v c:cs)
--}
-setVar :: Env -> Id -> Value -> Env
-setVar (Env s []) i v = error $ "Unknown variable " ++ printTree i ++ "."
+setVar (Env _ []) i _ = error $ "Unknown variable " ++ printTree i ++ "."
 setVar (Env s (c:cs)) i v =
     case Map.lookup i c of
         Nothing -> let (Env s' cs') = setVar (Env s cs) i v
                    in Env s' (c:cs')
-        Just x -> Env s (Map.insert i v c:cs)
+        Just _ -> Env s (Map.insert i v c:cs)
 
 setFun :: Env -> Def -> Env
 setFun (Env s c) d@(DFun _ i _ _) = Env (Map.insert i d s) c
@@ -264,4 +230,4 @@ enterScope :: Env -> Env
 enterScope (Env s c) = Env s (Map.empty:c)
 
 leaveScope :: Env -> Env
-leaveScope (Env s (c:cs)) = Env s cs
+leaveScope (Env s (_:cs)) = Env s cs
