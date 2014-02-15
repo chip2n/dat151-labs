@@ -27,7 +27,6 @@ data Env = Env { vars :: [Map.Map Id Int]
 type Instruction = Integer
 
 
-
 lookupVar :: Id -> State Env Int
 lookupVar x = do
     s <- get
