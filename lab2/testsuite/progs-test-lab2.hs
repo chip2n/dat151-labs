@@ -3,7 +3,6 @@
 -- GHC needs -threaded
 
 import Control.Concurrent
-import Control.Exception
 import Control.Monad
 import Data.Char
 import Data.IORef
@@ -15,6 +14,7 @@ import System.Exit
 import System.IO
 import System.Process
 import System.IO.Unsafe
+import Control.Exception
 
 
 -- Executable name
@@ -270,7 +270,6 @@ readFileIfExists f = catch (readFile f) exceptionHandler
 
 exceptionHandler :: IOException -> IO String
 exceptionHandler = (\_ -> return "")
-
 --
 -- * Error reporting and output checking
 --
