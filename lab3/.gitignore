@@ -16,3 +16,8 @@ PrintCPP.hs
 SkelCPP.hs
 TestCPP.hs
 lab2
+*.aux
+*.dvi
+TestCPP
+*.log
+*.ps
