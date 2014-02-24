@@ -254,7 +254,7 @@ compileExp (ETyped t e) =
                 Type_double -> undefined
 compileExp e = error $ "Not ETyped: " ++ show e
 
-ifElse :: Exp -> State Env () -> State Env ()
+ifElse :: Exp -> State Env () -> State Env () -> State Env ()
 ifElse = undefined
 {-
             false <- newLabel
