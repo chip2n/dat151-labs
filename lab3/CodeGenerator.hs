@@ -103,6 +103,7 @@ compileExp (ETyped t e) =
             a <- lookupVar i
             emit $ case t of
                 Type_int    -> "iload " ++ show a
+                Type_bool   -> "iload " ++ show a
                 Type_double -> "dload " ++ show a
         EApp (Id "printInt") e' -> do
             mapM_ compileExp e'
@@ -115,8 +116,24 @@ compileExp (ETyped t e) =
         EApp (Id "readDouble") e' -> do
             emit $ "invokestatic Runtime/readDouble()D"
         EApp   i es -> error "yolo"
-        EPIncr e    -> undefined
-        EPDecr e -> undefined
+        EPIncr e'@(ETyped t' (EId i))    -> do
+            compileExp e'
+            a <- lookupVar i
+            case t' of
+                Type_int -> do
+                    emit $ "dup"
+                    emit $ "iconst_1"
+                    emit $ "iadd"
+                    emit $ "istore " ++ show a
+        EPDecr e'@(ETyped t' (EId i))    -> do
+            compileExp e'
+            a <- lookupVar i
+            case t' of
+                Type_int -> do
+                    emit $ "dup"
+                    emit $ "iconst_1"
+                    emit $ "isub"
+                    emit $ "istore " ++ show a
         EIncr e'@(ETyped t' (EId i))    -> do
             compileExp e'
             a <- lookupVar i
@@ -130,7 +147,7 @@ compileExp (ETyped t e) =
                     emit $ "dconst_1"
                     emit $ "dadd"
                     -- TODO
-        EDecr  e    -> undefined
+        EDecr  e    -> error "Not defined: EDecr"
         ETimes a b  -> do
             compileExp a
             compileExp b
@@ -165,12 +182,67 @@ compileExp (ETyped t e) =
             emit "pop"
             emit "bipush 0"
             emit $ trueLabel ++ ":"
-        EGt   e1 e2  -> undefined
-        ELtEq e1 e2  -> undefined
-        EGtEq e1 e2  -> undefined
-        EEq   e1 e2  -> undefined
-        ENEq  e1 e2  -> undefined
-        EAnd  e1 e2  -> undefined
+        EGt   e1 e2  -> do
+            true <- newLabel
+            let trueLabel = "l" ++ show true
+            emit "bipush 1"
+            compileExp e1
+            compileExp e2
+            emit $ "if_icmpgt " ++ trueLabel
+            emit "pop"
+            emit "bipush 0"
+            emit $ trueLabel ++ ":"
+        ELtEq e1 e2  -> do
+            true <- newLabel
+            let trueLabel = "l" ++ show true
+            emit "bipush 1"
+            compileExp e1
+            compileExp e2
+            emit $ "if_icmple " ++ trueLabel
+            emit "pop"
+            emit "bipush 0"
+            emit $ trueLabel ++ ":"
+        EGtEq e1 e2  -> do
+            true <- newLabel
+            let trueLabel = "l" ++ show true
+            emit "bipush 1"
+            compileExp e1
+            compileExp e2
+            emit $ "if_icmpge " ++ trueLabel
+            emit "pop"
+            emit "bipush 0"
+            emit $ trueLabel ++ ":"
+        EEq   e1 e2  -> do
+            true <- newLabel
+            let trueLabel = "l" ++ show true
+            emit "bipush 1"
+            compileExp e1
+            compileExp e2
+            emit $ "if_icmpeq " ++ trueLabel
+            emit "pop"
+            emit "bipush 0"
+            emit $ trueLabel ++ ":"
+            
+        ENEq  e1 e2  -> do
+            true <- newLabel
+            let trueLabel = "l" ++ show true
+            emit "bipush 1"
+            compileExp e1
+            compileExp e2
+            emit $ "if_icmpne " ++ trueLabel
+            emit "pop"
+            emit "bipush 0"
+            emit $ trueLabel ++ ":"
+        EAnd  e1 e2  -> do
+            compileStm (SIfElse e1
+                          (SExp (ETyped Type_bool EFalse))
+                          (SIfElse e2
+                             (SExp (ETyped Type_bool EFalse))
+                             (SExp (ETyped Type_bool ETrue))
+                          )
+                       )
+
+            
         EOr   e1 e2  -> undefined
         EAss  (ETyped t' (EId i)) e2  -> do
             compileExp e2
@@ -182,6 +254,21 @@ compileExp (ETyped t e) =
                 Type_double -> undefined
 compileExp e = error $ "Not ETyped: " ++ show e
 
+ifElse :: Exp -> State Env () -> State Env ()
+ifElse = undefined
+{-
+            false <- newLabel
+            true <- newLabel
+            let falseLabel = "l" ++ show false
+            let trueLabel = "l" ++ show true
+            compileExp e 
+            emit $ "ifeq " ++ falseLabel
+            compileStm s1
+            emit $ "goto " ++ trueLabel
+            emit $ falseLabel ++ ":"
+            compileStm s2
+            emit $ trueLabel ++ ":"
+-}
 
 -- might require type-annotated syntax tree
 typExp :: Exp -> Type

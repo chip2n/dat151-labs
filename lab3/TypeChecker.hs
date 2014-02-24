@@ -123,10 +123,14 @@ inferExp env e =
             return (ETyped t (EDecr e'))
         ETimes e1 e2 -> do
             t <- compareExp e1 e2
-            return (ETyped t (ETimes (ETyped t e1) (ETyped t e2)))
+            e1' <- inferExp env e1
+            e2' <- inferExp env e2
+            return (ETyped t (ETimes e1' e2'))
         EDiv e1 e2 -> do
             t <- compareExp e1 e2
-            return (ETyped t (EDiv (ETyped t e1) (ETyped t e2)))
+            e1' <- inferExp env e1
+            e2' <- inferExp env e2
+            return (ETyped t (EDiv e1' e2'))
         EPlus e1 e2 -> do
             ETyped t _ <- inferBin [Type_int, Type_double] env e1 e2
             return (ETyped t (EPlus (ETyped t e1) (ETyped t e2)))
@@ -164,19 +168,19 @@ inferExp env e =
             e2' <- inferExp env e2
             return (ETyped Type_bool (ENEq e1' e2'))
         EAnd e1 e2 -> do
-            (ETyped t1 _) <- inferExp env e1
-            (ETyped t2 _) <- inferExp env e2
+            e1'@(ETyped t1 _) <- inferExp env e1
+            e2'@(ETyped t2 _) <- inferExp env e2
             if t1 == Type_bool && t2 == Type_bool
-                then return (ETyped t1 e)
+                then return (ETyped t1 (EAnd e1' e2'))
                 else fail (printTree e1 ++ " has type " ++ printTree t1
                             ++ " and " ++ printTree e2 ++ " has type "
                             ++ printTree t2 ++ ", but conjunction requires"
                             ++ " both arguments to be of type Bool.")
         EOr e1 e2 -> do
-            (ETyped t1 _) <- inferExp env e1
-            (ETyped t2 _) <- inferExp env e2
+            e1'@(ETyped t1 _) <- inferExp env e1
+            e2'@(ETyped t2 _) <- inferExp env e2
             if t1 == Type_bool && t2 == Type_bool
-                then return (ETyped t1 e)
+                then return (ETyped t1 (EOr e1' e2'))
                 else fail (printTree e1 ++ " has type " ++ printTree t1
                             ++ " and " ++ printTree e2 ++ " has type "
                             ++ printTree t2 ++ ", but disjunction requires"
