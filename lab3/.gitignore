@@ -1,3 +1,5 @@
+*.j
+test.class
 *.un~
 *.swp
 *.swo

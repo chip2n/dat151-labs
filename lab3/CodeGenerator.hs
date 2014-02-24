@@ -55,7 +55,8 @@ compileStm s =
                 Type_bool -> emit "pop"
                 Type_double -> emit "pop2"
                 Type_void -> return ()
-        SDecls  t is    -> undefined
+        SDecls  t is    -> do
+            mapM_ (\i -> addVar i t) is
         SInit   t i e   -> do
             addVar i t
             a <- lookupVar i
@@ -172,6 +173,7 @@ compileExp (ETyped t e) =
         EAnd  e1 e2  -> undefined
         EOr   e1 e2  -> undefined
         EAss  (ETyped t' (EId i)) e2  -> do
+            compileExp e2
             case t of
                 Type_int -> do
                     a <- lookupVar i

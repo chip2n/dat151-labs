@@ -121,10 +121,18 @@ inferExp env e =
         EDecr x  -> do
             e'@(ETyped t _) <- inferUna [Type_int, Type_double] env x
             return (ETyped t (EDecr e'))
-        ETimes e1 e2 -> compareExp e1 e2 >>= (\t -> return (ETyped t e))
-        EDiv e1 e2 -> compareExp e1 e2 >>= (\t -> return (ETyped t e))
-        EPlus e1 e2 -> inferBin [Type_int, Type_double] env e1 e2
-        EMinus e1 e2 -> inferBin [Type_int, Type_double] env e1 e2
+        ETimes e1 e2 -> do
+            t <- compareExp e1 e2
+            return (ETyped t (ETimes (ETyped t e1) (ETyped t e2)))
+        EDiv e1 e2 -> do
+            t <- compareExp e1 e2
+            return (ETyped t (EDiv (ETyped t e1) (ETyped t e2)))
+        EPlus e1 e2 -> do
+            ETyped t _ <- inferBin [Type_int, Type_double] env e1 e2
+            return (ETyped t (EPlus (ETyped t e1) (ETyped t e2)))
+        EMinus e1 e2 -> do
+            ETyped t _ <- inferBin [Type_int, Type_double] env e1 e2
+            return (ETyped t (EMinus (ETyped t e1) (ETyped t e2)))
         ELt e1 e2 -> do
             compareExp e1 e2
             e1' <- inferExp env e1
@@ -173,7 +181,11 @@ inferExp env e =
                             ++ " and " ++ printTree e2 ++ " has type "
                             ++ printTree t2 ++ ", but disjunction requires"
                             ++ " both arguments to be of type Bool.")
-        EAss (EId x) e1 -> compareExp (EId x) e1 >> inferExp env (EId x)
+        EAss (EId x) e1 -> do
+            compareExp (EId x) e1
+            ETyped t _ <- inferExp env (EId x)
+            e1' <- inferExp env e1
+            return (ETyped t (EAss (ETyped t (EId x)) e1'))
   where compareExp e1 e2 = do (ETyped t1 _) <- inferExp env e1
                               (ETyped t2 _) <- inferExp env e2
                               if t1 == t2
