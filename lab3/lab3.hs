@@ -6,6 +6,7 @@ import AbsCPP
 import LexCPP
 import ParCPP
 import ErrM
+import PrintCPP
 
 import TypeChecker
 import CodeGenerator
@@ -21,7 +22,9 @@ check s = case pProgram (myLexer s) of
                           Bad err -> do putStrLn "TYPE ERROR"
                                         putStrLn err
                                         exitFailure 
-                          Ok t -> createFile $ compile "test" t
+                          Ok t -> do
+                            putStrLn $ printTree t
+                            createFile $ compile "test" t
                           --Ok t -> putStrLn $ show t
 
 
