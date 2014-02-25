@@ -20,10 +20,10 @@ main = do
     goodFiles <- getDirectoryContents path
     let good = delete ".." . delete "." $ goodFiles
     let good' = filter (\x -> isSuffixOf ".cc" x) good
-    testAll $ sort good'
+    testAll path $ sort good'
 
-testAll :: [FilePath] -> IO ()
-testAll xs = mapM_ (\x -> test $ "/home/chip/git/dat151-labs/lab3/testsuite/good/" ++ x) xs
+testAll :: FilePath -> [FilePath] -> IO ()
+testAll root xs = mapM_ (\x -> test $ root ++ x) xs
 
 test :: FilePath -> IO ()
 test x = do

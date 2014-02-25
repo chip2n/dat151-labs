@@ -10,6 +10,7 @@ compile s p = unlines $ reverse $ code (execState (compileProgram s p) emptyEnv)
 
 compileProgram :: String -> Program -> State Env ()
 compileProgram name (PDefs defs) = do
+    buildSymbolTableYolo defs
     mapM_ emit [
       ".class public " ++ name,
       ".super java/lang/Object",
@@ -29,27 +30,43 @@ compileProgram name (PDefs defs) = do
      ]
     mapM_ compileDef defs
 
+buildSymbolTableYolo :: [Def] -> State Env ()
+buildSymbolTableYolo defs = mapM_ (\(DFun t i _ _) -> addFun i t) defs
+
 compileDef :: Def -> State Env ()
-compileDef (DFun _ (Id "main") _ stms) = do
+compileDef (DFun t (Id "main") _ stms) = do
     emit $ ".method public static main2()I"
     emit $ ".limit locals 100"  --- bogus limit
     emit $ ".limit stack 1000"   --- bogus limit
+    newBlock
     mapM_ compileStm $ stms
+    exitBlock            -- correct?
     emit $ "iconst_0"  -- maybe hax
     emit $ "ireturn"
     emit ".end method"
 compileDef (DFun t (Id i) args stms) = do
     emit $ ".method public static " ++ i ++ "(" ++ typArgs ++ ")" ++ typ t
-    emit $ ".limit locals " ++ show (length typArgs)  -- TODO: Probably wrong, see p.39
-    emit $ ".limit stack " ++ show (length typArgs)
+    --emit $ ".limit locals " ++ show (sum $ map (\(ADecl t' _) -> size t') args)
+    emit $ ".limit locals 100"
+    emit $ ".limit stack 1337"
     -- TODO: Add variables
+    newBlock
+    s <- get
+    let n' = nextAddress s
+    modify (\s -> s {nextAddress = 0} )
+    mapM_ (\(ADecl t' i') -> addVar i' t') args
+    mapM_ (\(ADecl t' i') -> lookupVar i' >>= (\a -> emit $ yolo t' ++ " " ++ show a)) args
     mapM_ compileStm $ stms -- TODO: Dont know if works
+    modify (\s' -> s' { nextAddress = n' } )
     emit ".end method"
+    exitBlock
   where typ (Type_int)    = "I"
         typ (Type_double) = "D"
         typ (Type_void)   = "V"
         typ (Type_bool)   = "Z"
         typArgs = concat $ map (\(ADecl t' _) -> typ t') args
+        yolo Type_int = "iload"
+        yolo Type_double = "dload"
 
 compileStm :: Stm -> State Env ()
 compileStm s = case s of
@@ -62,6 +79,7 @@ compileStm s = case s of
             Type_void -> return ()
     SDecls  t is    -> do
         mapM_ (\i -> addVar i t) is
+        mapM_ (\i -> lookupVar i >>= (\a -> emit "iconst_0" >> emit ("istore " ++ show a))) is
     SInit   t i e   -> do
         addVar i t
         a <- lookupVar i
@@ -84,7 +102,10 @@ compileStm s = case s of
         compileStm s'
         emit $ "goto " ++ testLabel
         emit $ endLabel ++ ":"
-    SBlock  stms    -> mapM_ compileStm stms
+    SBlock  stms    -> do
+        newBlock
+        mapM_ compileStm stms
+        exitBlock
     SIfElse e s1 s2 -> ifElse e (compileStm s1) (compileStm s2)
 
 compileExp :: Exp -> State Env ()
@@ -109,7 +130,15 @@ compileExp (ETyped t e) = case e of
         emit $ "invokestatic Runtime/readInt()I"
     EApp (Id "readDouble") _ -> do
         emit $ "invokestatic Runtime/readDouble()D"
-    EApp   i es -> error "yolo"
+    EApp (Id i) es -> do
+        t <- lookupFun (Id i)
+        mapM_ compileExp es
+        emit $ "invokestatic test/" ++ i ++ "(" ++ typArgs ++ ")" ++ typ t
+      where typ (Type_int)    = "I"
+            typ (Type_double) = "D"
+            typ (Type_void)   = "V"
+            typ (Type_bool)   = "Z"
+            typArgs = concat $ map (\(ETyped t' _) -> typ t') es
     -- Unary arithmetics
     EPIncr e'@(ETyped t' (EId i))    -> do
         compileExp e'
@@ -120,6 +149,11 @@ compileExp (ETyped t e) = case e of
                 emit $ "iconst_1"
                 emit $ "iadd"
                 emit $ "istore " ++ show a
+            Type_double -> do
+                emit $ "dup2"
+                emit $ "dconst_1"
+                emit $ "dadd"
+                emit $ "dstore " ++ show a
     EPDecr e'@(ETyped t' (EId i))    -> do
         compileExp e'
         a <- lookupVar i
@@ -128,7 +162,7 @@ compileExp (ETyped t e) = case e of
                 emit $ "dup"
                 emit $ "iconst_1"
                 emit $ "isub"
-                emit $ "istore " ++ show a
+                emit $ "istore " ++ show a            -- todo: double
     EIncr e'@(ETyped t' (EId i))    -> do
         compileExp e'
         a <- lookupVar i
@@ -219,6 +253,7 @@ emit i = modify (\s -> s {code = i : code s})
 
 data Env = Env {
     vars        :: [Map.Map Id Address],
+    funs        :: Map.Map Id Type,
     nextLabel   :: Int,
     nextAddress :: Address,
     maxAddress  :: Address,
@@ -235,6 +270,7 @@ type Label = Int
 emptyEnv :: Env
 emptyEnv = Env {
     vars        = [Map.empty],
+    funs        = Map.empty,
     nextLabel   = 0,
     nextAddress = 1,
     maxAddress  = 1,
@@ -253,8 +289,12 @@ lookupVar x = do
                 Just a  -> a
                 Nothing -> find ms
 
-lookupFun :: Id -> State Env FunType
-lookupFun = undefined
+lookupFun :: Id -> State Env Type
+lookupFun i = do
+    s <- get
+    case Map.lookup i (funs s) of
+        Nothing -> error $ "No function with id " ++ show i
+        Just t  -> return t
 
 newBlock :: State Env ()
 newBlock = modify (\s -> s { vars = Map.empty:vars s })
@@ -278,6 +318,9 @@ addVar i t = do
             , vars = Map.insert i (nextAddress s') currS:restS
             }
            )
+
+addFun :: Id -> Type -> State Env ()
+addFun i t = modify (\s -> s { funs = Map.insert i t (funs s) } )
 
 size :: Type -> Int
 size Type_int    = 1
