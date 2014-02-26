@@ -132,11 +132,11 @@ inferExp env e =
             e2' <- inferExp env e2
             return (ETyped t (EDiv e1' e2'))
         EPlus e1 e2 -> do
-            ETyped t _ <- inferBin [Type_int, Type_double] env e1 e2
-            return (ETyped t (EPlus (ETyped t e1) (ETyped t e2)))
+            (e1', e2') <- inferBin [Type_int, Type_double] env e1 e2
+            return (ETyped (typExp e1') (EPlus e1' e2'))
         EMinus e1 e2 -> do
-            ETyped t _ <- inferBin [Type_int, Type_double] env e1 e2
-            return (ETyped t (EMinus (ETyped t e1) (ETyped t e2)))
+            (e1', e2') <- inferBin [Type_int, Type_double] env e1 e2
+            return (ETyped (typExp e1') (EMinus e1' e2'))
         ELt e1 e2 -> do
             compareExp e1 e2
             e1' <- inferExp env e1
@@ -197,12 +197,15 @@ inferExp env e =
                                   else fail (printTree e1 ++ " has type " ++ printTree t1
                                               ++ " but " ++ printTree e2
                                               ++ " has type " ++ printTree t2)
+        typExp (ETyped t _) = t
 
-inferBin :: [Type] -> Env -> Exp -> Exp -> Err Exp
+inferBin :: [Type] -> Env -> Exp -> Exp -> Err (Exp,Exp)
 inferBin types env e1 e2 = do
-    (ETyped typ x) <- inferExp env e1
-    if elem typ types
-        then checkExp env e2 typ >> return (ETyped typ x)
+    e1'@(ETyped typ _) <- inferExp env e1
+    e2'@(ETyped typ' _) <- inferExp env e2
+
+    if elem typ types && typ == typ'
+        then return (e1', e2')
         else fail $ "Wrong type of expression" ++ printTree e1
 
 inferUna :: [Type] -> Env -> Exp -> Err Exp

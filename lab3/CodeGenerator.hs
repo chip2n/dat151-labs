@@ -2,6 +2,7 @@ module CodeGenerator where
 
 import qualified Data.Map as Map
 import Control.Monad.State
+import Data.Maybe
 
 import AbsCPP
 
@@ -67,6 +68,7 @@ compileDef (DFun t (Id i) args stms) = do
         typArgs = concat $ map (\(ADecl t' _) -> typ t') args
         yolo Type_int = "iload"
         yolo Type_double = "dload"
+        yolo Type_bool   = "iload"
 
 compileStm :: Stm -> State Env ()
 compileStm s = case s of
@@ -79,17 +81,25 @@ compileStm s = case s of
             Type_void -> return ()
     SDecls  t is    -> do
         mapM_ (\i -> addVar i t) is
-        mapM_ (\i -> lookupVar i >>= (\a -> emit "iconst_0" >> emit ("istore " ++ show a))) is
+        case t of
+            Type_int -> mapM_ (\i -> lookupVar i >>= (\a -> emit "iconst_0" >> emit ("istore " ++ show a))) is
+            Type_double -> mapM_ (\i -> lookupVar i >>= (\a -> emit "dconst_0" >> emit ("dstore " ++ show a))) is
+            Type_bool -> mapM_ (\i -> lookupVar i >>= (\a -> emit "iconst_0" >> emit ("istore " ++ show a))) is
     SInit   t i e   -> do
         addVar i t
         a <- lookupVar i
         compileExp e
-        emit $ "istore " ++ show a
+        case t of
+            Type_int    -> emit $ "istore " ++ show a
+            Type_double -> emit $ "dstore " ++ show a
+            Type_bool   -> emit $ "istore " ++ show a
     SReturn e       -> do
         compileExp e
         case typExp e of
             Type_int    -> emit "ireturn"
             Type_double -> emit "dreturn"
+            Type_bool   -> emit "ireturn"
+            Type_void   -> emit "return"
     SWhile  e s'    -> do
         test <- newLabel
         end  <- newLabel
@@ -179,12 +189,18 @@ compileExp (ETyped t e) = case e of
     EPlus  e1 e2 -> compileArithmetic e1 e2 "add" t
     EMinus e1 e2 -> compileArithmetic e1 e2 "sub" t
     -- Comparisons
-    ELt    e1 e2 -> compareExp e1 e2 "if_icmplt"
-    EGt    e1 e2 -> compareExp e1 e2 "if_icmpgt"
-    ELtEq  e1 e2 -> compareExp e1 e2 "if_icmple"
-    EGtEq  e1 e2 -> compareExp e1 e2 "if_icmpge"
-    EEq    e1 e2 -> compareExp e1 e2 "if_icmpeq"
-    ENEq   e1 e2 -> compareExp e1 e2 "if_icmpne"
+    --ELt    e1 e2 -> compareExp e1 e2 "if_icmplt"
+    --EGt    e1 e2 -> compareExp e1 e2 "if_icmpgt"
+    --ELtEq  e1 e2 -> compareExp e1 e2 "if_icmple"
+    --EGtEq  e1 e2 -> compareExp e1 e2 "if_icmpge"
+    --EEq    e1 e2 -> compareExp e1 e2 "if_icmpeq"
+    --ENEq   e1 e2 -> compareExp e1 e2 "if_icmpne"
+    ELt    e1 e2 -> compareExp e1 e2 CLT
+    EGt    e1 e2 -> compareExp e1 e2 CGT
+    ELtEq  e1 e2 -> compareExp e1 e2 CLTEQ
+    EGtEq  e1 e2 -> compareExp e1 e2 CGTEQ
+    EEq    e1 e2 -> compareExp e1 e2 CEQ
+    ENEq   e1 e2 -> compareExp e1 e2 CNEQ
     EAnd   e1 e2 -> 
         ifElse e1 (
             ifElse e2
@@ -210,17 +226,25 @@ compileExp (ETyped t e) = case e of
                 emit $ "istore " ++ show a
 compileExp e = error $ "Not ETyped: " ++ show e
 
-compareExp :: Exp -> Exp -> Instruction -> State Env ()
+data CompareOp = CLT | CLTEQ | CEQ | CNEQ | CGTEQ | CGT deriving (Enum, Eq)
+
+compareExp :: Exp -> Exp -> CompareOp -> State Env ()
 compareExp e1 e2 i = do
+    let t = typExp e1
     true <- newLabel
     let trueLabel = "l" ++ show true
     emit "bipush 1"
     compileExp e1
     compileExp e2
-    emit $ i ++ " " ++ trueLabel
+    cmp trueLabel t
     emit "pop"
     emit "bipush 0"
     emit $ trueLabel ++ ":"
+  where cmp l t = case t of
+                    Type_int -> emit $ "if_icmp" ++ instrRep i ++ l
+                    Type_double -> emit "dcmpl" >> emit ("if" ++ instrRep i ++ l)
+        lk = zip [CLT ..] ["lt ", "le ", "eq ", "ne ", "ge ", "gt "]
+        instrRep c = fromJust $ lookup c lk
 
 compileArithmetic :: Exp -> Exp -> Instruction -> Type -> State Env ()
 compileArithmetic e1 e2 i t = do
