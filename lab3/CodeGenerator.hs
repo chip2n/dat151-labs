@@ -23,8 +23,8 @@ compileProgram name (PDefs defs) = do
       ".end method",
       "",
       ".method public static main([Ljava/lang/String;)V",
-      ".limit locals 100",  --- bogus limit
-      ".limit stack 1000",   --- bogus limit
+      ".limit locals 100",
+      ".limit stack 1000",
       "invokestatic test/main2()I",
       "return",
       ".end method"
@@ -37,20 +37,20 @@ buildSymbolTableYolo defs = mapM_ (\(DFun t i _ _) -> addFun i t) defs
 compileDef :: Def -> State Env ()
 compileDef (DFun t (Id "main") _ stms) = do
     emit $ ".method public static main2()I"
-    emit $ ".limit locals 100"  --- bogus limit
-    emit $ ".limit stack 1000"   --- bogus limit
+    emit $ ".limit locals 100"
+    emit $ ".limit stack 1000"
     newBlock
     mapM_ compileStm $ stms
-    exitBlock            -- correct?
-    emit $ "iconst_0"  -- maybe hax
+    exitBlock
+
+    -- default return if not present
+    emit $ "iconst_0"
     emit $ "ireturn"
     emit ".end method"
 compileDef (DFun t (Id i) args stms) = do
     emit $ ".method public static " ++ i ++ "(" ++ typArgs ++ ")" ++ typ t
-    --emit $ ".limit locals " ++ show (sum $ map (\(ADecl t' _) -> size t') args)
     emit $ ".limit locals 100"
     emit $ ".limit stack 1337"
-    -- TODO: Add variables
     newBlock
     s <- get
     let n' = nextAddress s
@@ -59,6 +59,12 @@ compileDef (DFun t (Id i) args stms) = do
     mapM_ (\(ADecl t' i') -> lookupVar i' >>= (\a -> emit $ yolo t' ++ " " ++ show a)) args
     mapM_ compileStm $ stms -- TODO: Dont know if works
     modify (\s' -> s' { nextAddress = n' } )
+    -- default return if not present
+    case t of
+        Type_int -> emit "iconst_0" >> emit "ireturn"
+        Type_bool -> emit "iconst_0" >> emit "ireturn"
+        Type_double -> emit "dconst_0" >> emit "dreturn"
+        Type_void -> emit $ "return"
     emit ".end method"
     exitBlock
   where typ (Type_int)    = "I"
@@ -122,7 +128,7 @@ compileExp :: Exp -> State Env ()
 compileExp (ETyped t e) = case e of
     ETrue       -> emit "iconst_1"
     EFalse      -> emit "iconst_0"
-    EInt i      -> emit $ "bipush " ++ show i
+    EInt i      -> emit $ "ldc " ++ show i     -- TODO: Add check for size - use bipush if possible
     EDouble d   -> emit $ "ldc2_w " ++ show d
     EId i       -> do
         a <- lookupVar i
@@ -172,7 +178,12 @@ compileExp (ETyped t e) = case e of
                 emit $ "dup"
                 emit $ "iconst_1"
                 emit $ "isub"
-                emit $ "istore " ++ show a            -- todo: double
+                emit $ "istore " ++ show a
+            Type_double -> do
+                emit $ "dup2"
+                emit $ "dconst_1"
+                emit $ "dsub"
+                emit $ "dstore " ++ show a
     EIncr e'@(ETyped t' (EId i))    -> do
         compileExp e'
         a <- lookupVar i
