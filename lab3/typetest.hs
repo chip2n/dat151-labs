@@ -3,10 +3,7 @@ import Control.Concurrent.MVar
 import Control.Concurrent
 import System.IO
 import System.Environment
-import System.Exit (exitFailure)
 import System.Process (runInteractiveCommand, system)
-import AbsCPP
-import LexCPP
 import ParCPP
 import ErrM
 
@@ -42,7 +39,7 @@ type Output = String
 
 runCommand :: Command -> Input -> IO (Output, Error)
 runCommand cmd inp = do
-    (inpHandle, outHandle, errHandle, pid) <- runInteractiveCommand cmd
+    (inpHandle, outHandle, errHandle, _) <- runInteractiveCommand cmd
     outVar <- newEmptyMVar
     errVar <- newEmptyMVar
     forkIO $ do
@@ -80,9 +77,4 @@ execute x s = do
             putStrLn $ "Output:\n" ++ o
             putStrLn $ "Expected output:\n" ++ expectedOutput
 
-    return ()
-
-createFile :: String -> IO ()
-createFile code = do
-    system "java -cp . test"
     return ()
