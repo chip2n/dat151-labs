@@ -39,11 +39,16 @@ evalExp env e mode = case e of
     EAdd e1 e2 -> let VInt u = evalExp env e1 mode
                       VInt v = evalExp env e2 mode
                   in VInt (u + v)
-    EAdd e1 e2 -> let VInt u = evalExp env e1 mode
+    ESub e1 e2 -> let VInt u = evalExp env e1 mode
                       VInt v = evalExp env e2 mode
                   in VInt (u - v)
-    ELt e1 e2 -> undefined
-    EIf e1 e2 e3 -> undefined
+    ELt e1 e2 -> let VInt u = evalExp env e1 mode
+                     VInt v = evalExp env e2 mode
+                 in if u < v then (VInt 1) else (VInt 0)
+    EIf c a b -> let u = evalExp env c mode
+                 in if u == (VInt 1)
+                     then evalExp env a mode
+                     else evalExp env b mode
     EAbs i e' -> VClosure e (Env Map.empty $ variables env)
 
 
@@ -52,16 +57,16 @@ createEmptyClosure e args = VClosure (absConv e args) emptyEnv
 
 absConv :: Exp -> [Arg] -> Exp
 absConv e [] = e
-absConv e args = absConv (EAbs i e) (tail args)
+absConv e args = absConv (EAbs i e) (init args)
   where Arg i = last args
 
 data Env = Env {
     functions :: Map.Map Ident Value,
     variables :: Map.Map Ident Value
-} deriving (Show)
+} deriving (Show, Eq)
 
 data Value = VInt Integer
-           | VClosure Exp Env deriving (Show)
+           | VClosure Exp Env deriving (Show, Eq)
 
 emptyEnv :: Env
 emptyEnv = Env Map.empty Map.empty
@@ -70,7 +75,7 @@ lookup :: Ident -> Env -> Value
 lookup i@(Ident s) env =
     case lookupVar i env of
         Nothing -> case lookupFun i env of
-                       Nothing -> error $ "Variable " ++ s ++ " not found."
+                       Nothing -> error $ "Variable " ++ s ++ " not found. Env: " ++ show env
                        Just v  -> v
         Just v  -> v
 
@@ -80,8 +85,8 @@ lookupFun i env = Map.lookup i (functions env)
 lookupVar :: Ident -> Env -> Maybe Value
 lookupVar i env = Map.lookup i (variables env)
 
-updateVar :: Env -> Ident -> Value -> Env
-updateVar env i v = env { functions = Map.insert i v (functions env) }
-
 updateFun :: Env -> Ident -> Value -> Env
-updateFun env i v = env { variables = Map.insert i v (variables env) }
+updateFun env i v = env { functions = Map.insert i v (functions env) }
+
+updateVar :: Env -> Ident -> Value -> Env
+updateVar env i v = env { variables = Map.insert i v (variables env) }
