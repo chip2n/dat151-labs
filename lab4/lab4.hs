@@ -15,7 +15,7 @@ check flag s = case pProgram (myLexer s) of
                            putStrLn err
                            exitFailure 
             Ok  tree -> do putStrLn $ printTree tree
-                           i <- case flag of
+                           let i = case flag of
                                     "-n" -> interpret tree CallByName 
                                     "-v" -> interpret tree CallByValue
                            putStrLn $ "Result: " ++ show i

@@ -13,7 +13,8 @@ EAdd.    Exp1 ::= Exp1 "+" Exp2 ;
 ESub.    Exp1 ::= Exp1 "-" Exp2 ;
 ELt.     Exp1 ::= Exp1 "<" Exp2 ;
 EIf.     Exp0 ::= "if" Exp "then" Exp "else" Exp ;
-EAbs. Exp0 ::= "\\" [Arg] "->" Exp ;
+--EAbs. Exp0 ::= "\\" [Arg] "->" Exp ;
+EAbs. Exp0 ::= "\\" Ident "->" Exp ;
 
 coercions Exp 3 ;
 
