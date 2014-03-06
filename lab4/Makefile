@@ -8,5 +8,5 @@ clean:
 	-rm -f *.log *.aux *.hi *.o *.dvi
 	-rm -f DocGrammar.ps
 distclean: clean
-	-rm -f DocGrammar.* LexGrammar.* ParGrammar.* LayoutGrammar.* SkelGrammar.* PrintGrammar.* TestGrammar.* AbsGrammar.* TestGrammar ErrM.* SharedString.* Grammar.dtd XMLGrammar.* Makefile*
+	-rm -f DocGrammar.* LexGrammar.* ParGrammar.* LayoutGrammar.* SkelGrammar.* PrintGrammar.* TestGrammar.* AbsGrammar.* TestGrammar ErrM.* SharedString.* Grammar.dtd XMLGrammar.*
 
